@@ -346,7 +346,8 @@ def listar_vendas(data_inicio=None, data_fim=None, vendedor_id=None, produto=Non
     vendas = []
     for row in cur.fetchall():
         venda = dict(zip(colunas, row))
-        venda["itens"] = json.loads(venda["itensjson"])
+        venda["itens"] = venda["itensjson"] if venda["itensjson"] else []
+
 
         if produto:
             venda["itens"] = [
@@ -383,7 +384,7 @@ def buscar_venda(id_venda):
 
     colunas = [desc[0] for desc in cur.description]
     venda = dict(zip(colunas, row))
-    venda["itens"] = json.loads(venda["itensjson"])
+    venda["itens"] = venda["itensjson"] if venda["itensjson"] else []
 
     cur.close()
     conn.close()
