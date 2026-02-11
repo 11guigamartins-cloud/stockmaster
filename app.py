@@ -76,25 +76,29 @@ def listar_produtos():
 
 @app.route('/api/produtos', methods=['POST'])
 def criar_produto():
-    """Cria um novo produto - SEM RESTRIÇÃO"""
     dados = request.json
-    
-    codigo_limpo = dados['codigobarras'].strip().upper()
-    
-    id_novo = db.criar_produto(
-        codigo_limpo,
+
+    resultado = db.criar_produto(
+        dados['codigobarras'].strip().upper(),
         dados['nome'].strip(),
         dados.get('marca', '').strip(),
-        dados.get('linha', ''),
-        dados.get('tipo', ''),
+        dados.get('linha', '').strip(),
+        dados.get('tipo', '').strip(),
         float(dados['preco']),
         int(dados['estoque'])
     )
-    
-    if id_novo:
-        return jsonify({'sucesso': True, 'id': id_novo}), 201
-    else:
-        return jsonify({'sucesso': False, 'erro': 'Código de barras já existe'}), 400
+
+    if not resultado["sucesso"]:
+        return jsonify({
+            "sucesso": False,
+            "erro": resultado["erro"]
+        }), 409  # conflito (duplicado)
+
+    return jsonify({
+        "sucesso": True,
+        "id": resultado["id"]
+    }), 201
+
 
 @app.route('/api/produtos/<int:id>', methods=['PUT'])
 @requer_autenticacao
@@ -123,6 +127,7 @@ def editar_produto_completo(id):
     if db.atualizar_produto_completo(id, dados):
         return jsonify({'sucesso': True})
     return jsonify({'sucesso': False, 'erro': 'Erro ao atualizar'}), 400
+    
 
 @app.route('/api/produtos/buscar/<codigo>', methods=['GET'])
 def buscar_produto_codigo(codigo):
@@ -136,7 +141,6 @@ def buscar_produto_codigo(codigo):
 # ==================== ROTAS DE VENDEDORES ====================
 
 @app.route('/api/vendedores', methods=['GET'])
-@requer_autenticacao
 def listar_vendedores():
     """Lista todos os vendedores"""
     vendedores = db.listar_vendedores()

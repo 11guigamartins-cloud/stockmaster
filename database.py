@@ -2,6 +2,8 @@ import psycopg2
 import psycopg2.extras
 import json
 from datetime import datetime
+from psycopg2.errors import UniqueViolation
+
 
 # ================= CONFIGURAÇÃO =================
 DB_CONFIG = {
@@ -100,6 +102,7 @@ def init_db():
 def criar_produto(codigobarras, nome, marca, linha, tipo, preco, estoque):
     conn = get_connection()
     cur = conn.cursor()
+
     try:
         codigobarras = codigobarras.strip().upper()
 
@@ -112,19 +115,32 @@ def criar_produto(codigobarras, nome, marca, linha, tipo, preco, estoque):
 
         pid = cur.fetchone()[0]
         conn.commit()
-        return pid
+        return {
+            "sucesso": True,
+            "id": pid
+        }
+
+    except UniqueViolation:
+        conn.rollback()
+        return {
+            "sucesso": False,
+            "erro": "Produto já cadastrado com este código de barras."
+        }
 
     except Exception as e:
         conn.rollback()
         print("❌ ERRO REAL AO CRIAR PRODUTO:", e)
-        raise  # <-- MUITO IMPORTANTE
+        return {
+            "sucesso": False,
+            "erro": "Erro interno ao criar produto."
+        }
 
     finally:
         cur.close()
         conn.close()
 
 
-def listar_produtos(nome=None, marca=None, linha=None, tipo=None, codigo=None):
+def listar_produtos(nome=None, marca=None, linha=None, tipo=None):
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -132,28 +148,36 @@ def listar_produtos(nome=None, marca=None, linha=None, tipo=None, codigo=None):
     params = []
 
     if nome:
-        query += " AND nome ILIKE %s"
-        params.append(f"%{nome}%")
+        query += """
+            AND (
+                nome ILIKE %s
+                OR codigobarras ILIKE %s
+            )
+        """
+        termo = f"%{nome.strip().upper()}%"
+        params.extend([termo, termo])
+
     if marca:
         query += " AND marca ILIKE %s"
         params.append(f"%{marca}%")
+
     if linha:
         query += " AND linha ILIKE %s"
         params.append(f"%{linha}%")
+
     if tipo:
         query += " AND tipo ILIKE %s"
         params.append(f"%{tipo}%")
-    if codigo:
-        query += " AND codigobarras = %s"
-        params.append(codigo)
 
     query += " ORDER BY nome"
+
     cur.execute(query, params)
     dados = cur.fetchall()
 
     cur.close()
     conn.close()
     return dados
+
 
 def buscar_produto_por_codigo(codigo):
     conn = get_connection()

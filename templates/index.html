@@ -1474,12 +1474,27 @@
         function carregarVendedores() {
             fetch('/api/vendedores')
                 .then(r => r.json())
-                .then(data => {
-                    vendedores = data;
-                    atualizarTabelaVendedores();
-                    atualizarSelectVendedores();
+                .then(dados => {
+                    vendedores = dados;
+
+                    const select = document.getElementById('vendedor-select');
+                    const filtro = document.getElementById('filtro-vendedor');
+                    const dash = document.getElementById('dash-vendedor');
+
+                    // Limpa
+                    select.innerHTML = '<option value="">-- Sem Vendedor --</option>';
+                    if (filtro) filtro.innerHTML = '<option value="">Todos</option>';
+                    if (dash) dash.innerHTML = '<option value="">Todos</option>';
+
+                    vendedores.forEach(v => {
+                        const opt = `<option value="${v.id}">${v.nome}</option>`;
+                        select.innerHTML += opt;
+                        if (filtro) filtro.innerHTML += opt;
+                        if (dash) dash.innerHTML += opt;
+                    });
                 });
         }
+
 
         function atualizarTabelaVendedores() {
             const tbody = document.querySelector('#tabela-vendedores tbody');
