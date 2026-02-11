@@ -140,7 +140,7 @@ def criar_produto(codigobarras, nome, marca, linha, tipo, preco, estoque):
         conn.close()
 
 
-def listar_produtos(nome=None, marca=None, linha=None, tipo=None):
+def listar_produtos(nome=None, marca=None, linha=None, tipo=None, codigo=None):
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -148,14 +148,14 @@ def listar_produtos(nome=None, marca=None, linha=None, tipo=None):
     params = []
 
     if nome:
-        query += """
-            AND (
-                nome ILIKE %s
-                OR codigobarras ILIKE %s
-            )
-        """
-        termo = f"%{nome.strip().upper()}%"
-        params.extend([termo, termo])
+        query += " AND (nome ILIKE %s OR codigobarras ILIKE %s)"
+        params.append(f"%{nome}%")
+        params.append(f"%{nome}%")
+
+
+    if codigo:
+        query += " AND codigobarras = %s"
+        params.append(codigo.strip())
 
     if marca:
         query += " AND marca ILIKE %s"
